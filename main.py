@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 
 # ===============================
@@ -9,88 +8,166 @@ import joblib
 knn_model = joblib.load("knn_model.pkl")
 scaler = joblib.load("scaler.pkl")
 
-st.set_page_config(page_title="Prediksi CKD", layout="wide")
+st.set_page_config(
+    page_title="Prediksi CKD",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-st.title("🩺 Sistem Prediksi Penyakit Ginjal Kronis (CKD)")
+# ===============================
+# HEADER
+# ===============================
 st.markdown("""
-Aplikasi ini ditujukan untuk **pengguna awam**.  
-Input disederhanakan menjadi **Normal / Tidak Normal** berdasarkan standar medis.  
-⚠️ *Hasil prediksi tidak menggantikan diagnosis dokter.*
-""")
+<h1 style='text-align:center;'>🩺 Sistem Prediksi Penyakit Ginjal Kronis (CKD)</h1>
+<p style='text-align:center;'>
+Implementasi awal model <i>Machine Learning</i> menggunakan algoritma
+<b>K-Nearest Neighbor (KNN)</b><br>
+
+</p>
+<hr>
+""", unsafe_allow_html=True)
 
 # ===============================
 # SIDEBAR INPUT
 # ===============================
-st.sidebar.header("🧾 Input Data Pasien")
+st.sidebar.header("🧾 Input Data Pasien ")
 
-age = st.sidebar.number_input("Usia (tahun)", 1, 100, 45)
+# 1. DEMOGRAFI
+st.sidebar.subheader("1️⃣ Data Demografi")
+age = st.sidebar.number_input(
+    "AGE – Age (Usia pasien dalam tahun)",
+    1, 100, 45
+)
 
-hipertensi = st.sidebar.selectbox("Hipertensi", ["Tidak", "Ya"])
-bp = 140 if hipertensi == "Ya" else 120
+# 2. TEKANAN DARAH & URIN
+st.sidebar.subheader("2️⃣ Tekanan Darah & Urin")
 
-sg_status = st.sidebar.selectbox("Berat Jenis Urin", ["Normal", "Tidak Normal"])
-sg = 1.020 if sg_status == "Normal" else 1.005
+bp = st.sidebar.number_input(
+    "BP – Blood Pressure (Tekanan darah, mmHg)",
+    50, 200, 80
+)
 
-albumin = st.sidebar.selectbox("Albumin Urin", ["Normal", "Tidak Normal"])
-al = 0 if albumin == "Normal" else 2
+sg = st.sidebar.number_input(
+    "SG – Specific Gravity (Berat jenis urin)",
+    1.000, 1.030, 1.020, step=0.005
+)
 
-sugar = st.sidebar.selectbox("Gula dalam Urin", ["Tidak", "Ada"])
-su = 0 if sugar == "Tidak" else 2
+al = st.sidebar.number_input(
+    "AL – Albumin (Kadar albumin dalam urin, 0–5)",
+    0, 5, 1
+)
 
-rbc = st.sidebar.selectbox("Sel Darah Merah (Urin)", ["Normal", "Abnormal"])
-rbc = 0 if rbc == "Normal" else 1
+su = st.sidebar.number_input(
+    "SU – Sugar (Kadar gula dalam urin, 0–5)",
+    0, 5, 0
+)
 
-pc = st.sidebar.selectbox("Pus Cell", ["Normal", "Abnormal"])
-pc = 0 if pc == "Normal" else 1
+# 3. SEL DARAH & INFEKSI URIN
+st.sidebar.subheader("3️⃣ Sel Darah & Infeksi Urin")
 
-pcc = st.sidebar.selectbox("Pus Cell Clumps", ["Tidak Ada", "Ada"])
-pcc = 0 if pcc == "Tidak Ada" else 1
+rbc = st.sidebar.number_input(
+    "RBC – Red Blood Cells (Sel darah merah urin, 0=normal, 1=abnormal)",
+    0, 1, 0
+)
 
-ba = st.sidebar.selectbox("Bakteri dalam Urin", ["Tidak Ada", "Ada"])
-ba = 0 if ba == "Tidak Ada" else 1
+pc = st.sidebar.number_input(
+    "PC – Pus Cell (Sel nanah urin, 0=normal, 1=abnormal)",
+    0, 1, 0
+)
 
-bgr_status = st.sidebar.selectbox("Gula Darah Acak", ["Normal", "Tinggi"])
-bgr = 120 if bgr_status == "Normal" else 180
+pcc = st.sidebar.number_input(
+    "PCC – Pus Cell Clumps (Gumpalan sel nanah, 0=tidak ada, 1=ada)",
+    0, 1, 0
+)
 
-bu_status = st.sidebar.selectbox("Urea Darah", ["Normal", "Tinggi"])
-bu = 15 if bu_status == "Normal" else 40
+ba = st.sidebar.number_input(
+    "BA – Bacteria (Bakteri dalam urin, 0=tidak ada, 1=ada)",
+    0, 1, 0
+)
 
-sc_status = st.sidebar.selectbox("Kreatinin Serum", ["Normal", "Tinggi"])
-sc = 1.0 if sc_status == "Normal" else 3.0
+# 4. PARAMETER DARAH
+st.sidebar.subheader("4️⃣ Parameter Darah")
 
-sod_status = st.sidebar.selectbox("Natrium", ["Normal", "Tidak Normal"])
-sod = 140 if sod_status == "Normal" else 130
+bgr = st.sidebar.number_input(
+    "BGR – Blood Glucose Random (Gula darah acak, mg/dL)",
+    50, 500, 120
+)
 
-pot_status = st.sidebar.selectbox("Kalium", ["Normal", "Tidak Normal"])
-pot = 4.0 if pot_status == "Normal" else 6.0
+bu = st.sidebar.number_input(
+    "BU – Blood Urea (Kadar urea darah, mg/dL)",
+    1, 200, 15
+)
 
-hemo_status = st.sidebar.selectbox("Hemoglobin", ["Normal", "Rendah"])
-hemo = 14 if hemo_status == "Normal" else 9
+sc = st.sidebar.number_input(
+    "SC – Serum Creatinine (Kreatinin serum, mg/dL)",
+    0.1, 20.0, 1.2
+)
 
-pcv_status = st.sidebar.selectbox("Packed Cell Volume", ["Normal", "Rendah"])
-pcv = 45 if pcv_status == "Normal" else 30
+sod = st.sidebar.number_input(
+    "SOD – Sodium (Natrium darah, mEq/L)",
+    100, 170, 140
+)
 
-wbcc_status = st.sidebar.selectbox("Sel Darah Putih", ["Normal", "Tidak Normal"])
-wbcc = 7000 if wbcc_status == "Normal" else 13000
+pot = st.sidebar.number_input(
+    "POT – Potassium (Kalium darah, mEq/L)",
+    2.0, 7.0, 4.0
+)
 
-rbcc_status = st.sidebar.selectbox("Jumlah Sel Darah Merah", ["Normal", "Rendah"])
-rbcc = 5.0 if rbcc_status == "Normal" else 3.5
+# 5. HEMATOLOGI
+st.sidebar.subheader("5️⃣ Hematologi")
 
-htn = 1 if hipertensi == "Ya" else 0
-dm = st.sidebar.selectbox("Diabetes", ["Tidak", "Ya"])
-dm = 1 if dm == "Ya" else 0
+hemo = st.sidebar.number_input(
+    "HEMO – Hemoglobin (g/dL)",
+    3.0, 20.0, 14.0
+)
 
-cad = st.sidebar.selectbox("Penyakit Jantung", ["Tidak", "Ya"])
-cad = 1 if cad == "Ya" else 0
+pcv = st.sidebar.number_input(
+    "PCV – Packed Cell Volume (Persentase volume sel darah merah)",
+    10, 60, 45
+)
 
-appet = st.sidebar.selectbox("Nafsu Makan", ["Baik", "Buruk"])
-appet = 0 if appet == "Baik" else 1
+wbcc = st.sidebar.number_input(
+    "WBCC – White Blood Cell Count (Jumlah sel darah putih /mm³)",
+    2000, 20000, 7000
+)
 
-pe = st.sidebar.selectbox("Pembengkakan Kaki", ["Tidak", "Ya"])
-pe = 1 if pe == "Ya" else 0
+rbcc = st.sidebar.number_input(
+    "RBCC – Red Blood Cell Count (Jumlah sel darah merah, juta/µL)",
+    2.0, 8.0, 5.0
+)
 
-ane = st.sidebar.selectbox("Anemia", ["Tidak", "Ya"])
-ane = 1 if ane == "Ya" else 0
+# 6. PENYAKIT PENYERTA
+st.sidebar.subheader("6️⃣ Penyakit Penyerta (0 / 1)")
+
+htn = st.sidebar.number_input(
+    "HTN – Hypertension (Hipertensi, 0=tidak, 1=ya)",
+    0, 1, 0
+)
+
+dm = st.sidebar.number_input(
+    "DM – Diabetes Mellitus (Diabetes, 0=tidak, 1=ya)",
+    0, 1, 0
+)
+
+cad = st.sidebar.number_input(
+    "CAD – Coronary Artery Disease (Penyakit jantung koroner, 0=tidak, 1=ya)",
+    0, 1, 0
+)
+
+appet = st.sidebar.number_input(
+    "APPET – Appetite (Nafsu makan pasien, 0=baik, 1=buruk)",
+    0, 1, 0
+)
+
+pe = st.sidebar.number_input(
+    "PE – Pedal Edema (Pembengkakan kaki, 0=tidak, 1=ya)",
+    0, 1, 0
+)
+
+ane = st.sidebar.number_input(
+    "ANE – Anemia (Kekurangan sel darah merah, 0=tidak, 1=ya)",
+    0, 1, 0
+)
 
 # ===============================
 # DATAFRAME INPUT
@@ -105,16 +182,78 @@ input_data = pd.DataFrame([[
     'htn','dm','cad','appet','pe','ane'
 ])
 
+st.subheader("📋 Data Input Pasien")
+st.dataframe(input_data, use_container_width=True)
 
 # ===============================
 # PREDIKSI
 # ===============================
-if st.button("🔍 Prediksi CKD"):
+st.markdown("---")
+if st.button("🔍 Jalankan Prediksi"):
     input_scaled = scaler.transform(input_data)
     prediction = knn_model.predict(input_scaled)[0]
 
-    st.subheader("📊 Hasil Prediksi")
+    st.subheader("📊 Hasil Prediksi Sistem")
+
     if prediction == 1:
-        st.error("⚠️ TERDETEKSI RISIKO CKD")
+        st.markdown("""
+        <div style="
+            padding:22px;
+            background-color:#ffe6e6;
+            border-left:6px solid #c62828;
+            border-radius:10px;
+        ">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:32px; color:#c62828;">⚠</span>
+                <span style="
+                    font-size:26px;
+                    font-weight:700;
+                    color:#000000;
+                ">
+                    Prediksi: CKD (Penyakit Ginjal Kronis)
+                </span>
+            </div>
+            <p style="
+                margin-top:10px;
+                font-size:16px;
+                color:#000000;
+            ">
+                Sistem memprediksi bahwa pasien berisiko mengalami Penyakit Ginjal Kronis.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
     else:
-        st.success("✅ TIDAK TERDETEKSI CKD")
+        st.markdown("""
+        <div style="
+            padding:22px;
+            background-color:#ddffdd;
+            border-left:6px solid #2e7d32;
+            border-radius:10px;
+        ">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:32px; color:#2e7d32;">✔</span>
+                <span style="
+                    font-size:26px;
+                    font-weight:700;
+                    color:#000000;
+                ">
+                    Prediksi: Not CKD
+                </span>
+            </div>
+            <p style="
+                margin-top:10px;
+                font-size:16px;
+                color:#000000;
+            ">
+                Sistem memprediksi bahwa pasien tidak terdeteksi berisiko Penyakit Ginjal Kronis.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+
+    st.info(
+        "Catatan: Hasil prediksi bersifat simulasi komputasional "
+        "dan tidak menggantikan diagnosis medis oleh tenaga kesehatan."
+    )
